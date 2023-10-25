@@ -200,7 +200,23 @@ def huber_loss_vectorized(W, X, y, reg):
     #############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     
-    pass
+    num_classes = W.shape[1]
+    num_train = X.shape[0]
+    scores = np.dot(X, W)
+    
+    margins = np.zeros(scores.shape)
+    margins_temp = scores - (scores[np.arange(num_train), y])[:, np.newaxis]
+    
+    positive_mask = (margins_temp > 1)
+    btw_mask = (-1 < margins_temp) & (margins_temp <= 1)
+    
+    margins[positive_mask] = 4*margins_temp[positive_mask]
+    margins[btw_mask] = (margins_temp[btw_mask]+1)**2
+    margins[np.arange(num_train), y] = 0.0
+    
+    loss += np.sum(margins)
+    loss /= num_train
+    loss += reg * np.sum(W * W)
     
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     #############################################################################
