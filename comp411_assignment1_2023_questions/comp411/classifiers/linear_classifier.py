@@ -113,7 +113,7 @@ class LinearClassifier(object):
         ###########################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        y_pred = np.argmax(np.dot(X, self.W), axis = 1)
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         return y_pred
