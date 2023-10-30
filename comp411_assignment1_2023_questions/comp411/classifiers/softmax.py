@@ -41,7 +41,27 @@ def softmax_loss_naive(W, X, y, reg_l2, reg_l1 = 0):
     ##############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    num_samples = X.shape[0]    
+    scores = np.dot(X, W)
+    
+    for sample in range(num_samples):
+        scores_sample  = scores[sample] 
+        scores_sample -= np.max(scores[sample])
+        softmax = np.exp(scores_sample ) / np.sum(np.exp(scores_sample ))
+        loss = loss - np.log(softmax[y[sample]])
+        softmax[y[sample]] -= 1
+        dW += np.outer(X[sample], softmax)
+        
+        
+    dW /= num_samples
+    loss /= num_samples
+    
+    loss += reg_l2 * np.sum(W**2) / 2
+    dW += reg_l2 * W
+    
+    if regtype == 'ElasticNet':
+        loss += reg_l1 * np.sum(np.abs(W))
+        dW += reg_l1 * np.sign(W)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
