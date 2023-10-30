@@ -28,7 +28,7 @@ class FourLayerNet(object):
         input_dim=3 * 32 * 32,
         hidden_dim=100,
         num_classes=10,
-        weight_scale=1e-3,
+        weight_scale=1e-2,
         reg=0.0,
     ):
         """
@@ -55,8 +55,15 @@ class FourLayerNet(object):
         # weights and biases using the keys 'W2' and 'b2' and so on..              #
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-        pass
+        
+        self.params['W1'] = np.random.normal(loc=0, scale=weight_scale, size=(input_dim, hidden_dim))
+        self.params['b1'] = np.zeros(hidden_dim)
+        self.params['W2'] = np.random.normal(loc=0, scale=weight_scale, size=(hidden_dim, hidden_dim))
+        self.params['b2'] = np.zeros(hidden_dim)
+        self.params['W3'] = np.random.normal(loc=0, scale=weight_scale, size=(hidden_dim, hidden_dim))
+        self.params['b3'] = np.zeros(hidden_dim)
+        self.params['W4'] = np.random.normal(loc=0, scale=weight_scale, size=(hidden_dim, num_classes))
+        self.params['b4'] = np.zeros(num_classes)
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
@@ -88,8 +95,11 @@ class FourLayerNet(object):
         # class scores for X and storing them in the scores variable.              #
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-        pass
+        
+        layer_1_out, layer_1_cache = affine_relu_forward(X, self.params['W1'], self.params['b1'])
+        layer_2_out, layer_2_cache = affine_relu_forward(layer_1_out, self.params['W2'], self.params['b2'])
+        layer_3_out, layer_3_cache = affine_relu_forward(layer_2_out, self.params['W3'], self.params['b3'])
+        scores, layer_4_cache = affine_forward(layer_3_out, self.params['W4'], self.params['b4'])
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
@@ -110,8 +120,29 @@ class FourLayerNet(object):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        loss_softmax, dscores = softmax_loss(scores, y)
 
+        # sum 0.5 reg W^2
+        reg_loss = 0.5*self.reg*np.sum(self.params['W1']**2)
+        reg_loss += 0.5*self.reg*np.sum(self.params['W2']**2) 
+        reg_loss += 0.5*self.reg*np.sum(self.params['W3']**2) 
+        reg_loss += 0.5*self.reg*np.sum(self.params['W4']**2)
+        
+        loss = loss_softmax + reg_loss
+
+        dlayer_4_out, dW4, db4 = affine_backward(dscores, layer_4_cache)
+        dlayer_3_out, dW3, db3 = affine_relu_backward(dlayer_4_out, layer_3_cache)
+        dlayer_2_out, dW2, db2 = affine_relu_backward(dlayer_3_out, layer_2_cache)
+        dlayer_1_out, dW1, db1 = affine_relu_backward(dlayer_2_out, layer_1_cache)
+
+        grads['W1'] = dW1 + self.reg * self.params['W1']
+        grads['b1'] = db1
+        grads['W2'] = dW2 + self.reg * self.params['W2']
+        grads['b2'] = db2
+        grads['W3'] = dW3 + self.reg * self.params['W3']
+        grads['b3'] = db3
+        grads['W4'] = dW4 + self.reg * self.params['W4']
+        grads['b4'] = db4
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
         #                             END OF YOUR CODE                             #
