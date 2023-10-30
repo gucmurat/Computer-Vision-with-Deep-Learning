@@ -27,8 +27,17 @@ def affine_forward(x, w, b):
     # will need to reshape the input into rows.                               #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    pass
+    
+    # extract N from x: (N,d_1,...,d_k)
+    N = x.shape[0]
+    # extract d_1,...,d_k from x: (N,d_1,...,d_k)
+    d1_dk = x.shape[1:]
+    # take product of all from d1 to dk
+    D = np.prod(d1_dk)
+    # reshape x according to (N,D)
+    x_reshaped = x.reshape(N,D)
+    # out = Wx + b
+    out = np.dot(x_reshaped, w) + b
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -60,8 +69,23 @@ def affine_backward(dout, cache):
     # TODO: Implement the affine backward pass.                               #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    pass
+    
+    # code from previous part
+    # extract N from x: (N,d_1,...,d_k)
+    N = x.shape[0]
+    # extract d_1,...,d_k from x: (N,d_1,...,d_k)
+    d1_dk = x.shape[1:]
+    # take product of all from d1 to dk
+    D = np.prod(d1_dk)
+    # reshape x according to (N,D)
+    x_reshaped = x.reshape(N,D)
+    
+    # dout/dx = w --> dx = dout/w
+    dx = dout.dot(w.T).reshape(x.shape)
+    # dout/dw = x --> dw = dout/x
+    dw = x_reshaped.T.dot(dout)
+    # dout/db = 1 --> db = dout
+    db = np.sum(dout, axis=0)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -86,8 +110,10 @@ def relu_forward(x):
     # TODO: Implement the ReLU forward pass.                                  #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    pass
+    out = x
+    out[out < 0] = 0
+    
+    #pass
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -113,8 +139,11 @@ def relu_backward(dout, cache):
     # TODO: Implement the ReLU backward pass.                                 #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    pass
+    
+    # dx = (1 if x > 0) * dout
+    
+    x[x > 0 ] = 1
+    dx = x * dout
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -142,8 +171,41 @@ def svm_loss(x, y):
     # TODO: Copy over your solution from A1.
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    
+    N = x.shape[0]
+    C = x.shape[1]
+    margin = 1
+    loss = 0
+    dx = np.zeros_like(x)
+    
+    for i in range(N):
+        correct_class_score = x[i,y[i]]
+        for j in range(C):
+            if y[i] == j:
+                continue
+            score = x[i,j]
+            innerloss = np.maximum(0, score - correct_class_score + margin)
+            loss += innerloss
+            if score - correct_class_score + margin > 0:
+                dx[i, j] = 1
+                dx[i, y[i]] -= 1 
+        
+    loss /= N
+    dx /= N
+    """
+    N = x.shape[0]
+    correct_class_scores = x[np.arange(N), y]
+    margins = np.maximum(0, x - correct_class_scores[:, np.newaxis] + 1.0)
+    margins[np.arange(N), y] = 0
+    loss = np.sum(margins) / N
+    num_pos = np.sum(margins > 0, axis=1)
+    dx = np.zeros_like(x)
+    dx[margins > 0] = 1
+    dx[np.arange(N), y] -= num_pos
+    dx /= N"""
+  
 
-    pass
+    #pass
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -172,9 +234,14 @@ def softmax_loss(x, y):
     # TODO: Copy over your solution from A1.
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    pass
-
+    # p(x) = e^x/sum(e^x)
+    prob = np.exp(x)
+    prob /= np.sum(prob, axis=1, keepdims=True)
+    N = x.shape[0]
+    loss = -np.sum(np.log(prob[np.arange(N), y])) / N
+    dx = prob.copy()
+    dx[np.arange(N), y] -= 1
+    dx /= N
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
