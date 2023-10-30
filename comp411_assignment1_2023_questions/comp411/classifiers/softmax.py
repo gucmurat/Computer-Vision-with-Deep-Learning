@@ -41,27 +41,25 @@ def softmax_loss_naive(W, X, y, reg_l2, reg_l1 = 0):
     ##############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    num_samples = X.shape[0]    
-    scores = np.dot(X, W)
+    num_train = X.shape[0]
+    num_classes = W.shape[1]
     
-    for sample in range(num_samples):
-        scores_sample  = scores[sample] 
-        scores_sample -= np.max(scores[sample])
-        softmax = np.exp(scores_sample ) / np.sum(np.exp(scores_sample ))
-        loss = loss - np.log(softmax[y[sample]])
-        softmax[y[sample]] -= 1
-        dW += np.outer(X[sample], softmax)
-        
-        
-    dW /= num_samples
-    loss /= num_samples
+    for sample in range(num_train):
+        scores = np.dot(X[sample], W)
+        scores = np.exp(scores - np.max(scores))
+        softmax = scores / np.sum(scores)
+        loss -= np.log(softmax[y[sample]])
+        for class_index in range(num_classes):
+            dW[:, class_index] += (softmax[class_index] - (class_index == y[sample])) * X[sample]
+            
+    loss /= num_train
+    dW /= num_train
     
-    loss += reg_l2 * np.sum(W**2) / 2
-    dW += reg_l2 * W
+    reg = reg_l2 * np.sum(W * W) + (regtype == 'ElasticNet') * reg_l1 * np.sum(np.abs(W))
+    regdW = 2 * reg_l2 *  W + (regtype == 'ElasticNet') * reg_l1 * np.sign(W)
     
-    if regtype == 'ElasticNet':
-        loss += reg_l1 * np.sum(np.abs(W))
-        dW += reg_l1 * np.sign(W)
+    dW += regdW
+    loss += reg
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -92,7 +90,21 @@ def softmax_loss_vectorized(W, X, y, reg_l2, reg_l1 = 0):
     ##############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    num_train = X.shape[0]
+    num_classes = W.shape[1]
+
+    scores = np.dot(X, W)
+    scores = np.exp(scores - np.max(scores, axis=1, keepdims=True))
+    scores /= np.sum(scores, axis=1, keepdims=True)
+    loss = np.sum(-np.log(scores[np.arange(num_train), y])) / num_train
+    scores[np.arange(num_train), y] -= 1
+    dW = np.dot(X.T, scores) / num_train
+       
+    reg = reg_l2 * np.sum(W * W) + (regtype == 'ElasticNet') * reg_l1 * np.sum(np.abs(W))
+    regdW = 2 * reg_l2 *  W + (regtype == 'ElasticNet') * reg_l1 * np.sign(W)
+
+    dW += regdW
+    loss += reg
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
