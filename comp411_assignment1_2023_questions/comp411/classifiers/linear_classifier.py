@@ -67,6 +67,7 @@ class LinearClassifier(object):
 
             rand_batch_indices = np.random.choice(num_train, batch_size, replace = True)
             
+            # Extract corresponding input features and their labels.
             X_batch = X[rand_batch_indices, :]
             y_batch = y[rand_batch_indices]
 
@@ -83,6 +84,7 @@ class LinearClassifier(object):
             #########################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
+            # Update weights.
             self.W = self.W - learning_rate * grad
 
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****

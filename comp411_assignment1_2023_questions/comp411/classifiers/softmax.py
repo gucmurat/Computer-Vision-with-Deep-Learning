@@ -46,15 +46,17 @@ def softmax_loss_naive(W, X, y, reg_l2, reg_l1 = 0):
     
     for sample in range(num_train):
         scores = np.dot(X[sample], W)
+        # Apply softmax function to the raw scores to get probabilities for each class.
         scores = np.exp(scores - np.max(scores))
         softmax = scores / np.sum(scores)
-        loss -= np.log(softmax[y[sample]])
+        loss -= np.log(softmax[y[sample]]) # Negative log-likelihood
         for class_index in range(num_classes):
-            dW[:, class_index] += (softmax[class_index] - (class_index == y[sample])) * X[sample]
-            
+            dW[:, class_index] += (softmax[class_index] - (class_index == y[sample])) * X[sample] # Weight update
+    
     loss /= num_train
     dW /= num_train
     
+    # Calculate and add the regularizations terms for the loss and gradient.
     reg = reg_l2 * np.sum(W * W) + (regtype == 'ElasticNet') * reg_l1 * np.sum(np.abs(W))
     regdW = 2 * reg_l2 *  W + (regtype == 'ElasticNet') * reg_l1 * np.sign(W)
     
@@ -92,14 +94,17 @@ def softmax_loss_vectorized(W, X, y, reg_l2, reg_l1 = 0):
 
     num_train = X.shape[0]
     num_classes = W.shape[1]
-
     scores = np.dot(X, W)
+    
+    # Apply softmax function to the raw scores to get probabilities for each class.
     scores = np.exp(scores - np.max(scores, axis=1, keepdims=True))
     scores /= np.sum(scores, axis=1, keepdims=True)
-    loss += np.sum(-np.log(scores[np.arange(num_train), y])) / num_train
+    
+    loss += np.sum(-np.log(scores[np.arange(num_train), y])) / num_train 
     scores[np.arange(num_train), y] -= 1
-    dW = np.dot(X.T, scores) / num_train
-       
+    dW = np.dot(X.T, scores) / num_train # Weight update
+    
+    # Calculate and add the regularizations terms for the loss and gradient.
     reg = reg_l2 * np.sum(W * W) + (regtype == 'ElasticNet') * reg_l1 * np.sum(np.abs(W))
     regdW = 2 * reg_l2 *  W + (regtype == 'ElasticNet') * reg_l1 * np.sign(W)
 
