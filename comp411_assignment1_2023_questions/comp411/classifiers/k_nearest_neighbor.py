@@ -109,7 +109,6 @@ class KNearestNeighbor(object):
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
             
             dists[i, :] = np.sqrt(np.sum(np.square(X[i] - self.X_train), axis=1))
-            #dists[i, :] = np.sqrt(np.sum(np.square(X[i] - self.X_train)))
             
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         return dists
@@ -146,7 +145,6 @@ class KNearestNeighbor(object):
         X_trained_square = np.sum(np.square(self.X_train), axis=1)
        
         dists = np.sqrt(X_square - 2 * dot_product + X_trained_square)
-        #pass
         
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         return dists
@@ -253,7 +251,6 @@ class KNearestNeighbor(object):
         cosine_similarity = dot_product / (X_magnitude[:, np.newaxis] * X_train_magnitude)
 
         dists[:,:] = 1.0 - cosine_similarity
-        #pass
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         return dists
@@ -290,8 +287,6 @@ class KNearestNeighbor(object):
             
             closest_y = self.y_train[indices[:k]]
             
-            #pass
-
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
             #########################################################################
             # TODO:                                                                 #
@@ -306,7 +301,6 @@ class KNearestNeighbor(object):
             ind = np.argmax(counts)
             
             y_pred[i] = values[ind]
-            #pass
 
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
