@@ -25,7 +25,16 @@ def affine_forward(x, w, b):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    # extract N from x: (N,d_1,...,d_k)
+    N = x.shape[0]
+    # extract d_1,...,d_k from x: (N,d_1,...,d_k)
+    d1_dk = x.shape[1:]
+    # take product of all from d1 to dk
+    D = np.prod(d1_dk)
+    # reshape x according to (N,D)
+    x_reshaped = x.reshape(N,D)
+    # out = Wx + b
+    out = np.dot(x_reshaped, w) + b
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -57,7 +66,22 @@ def affine_backward(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    # code from previous part
+    # extract N from x: (N,d_1,...,d_k)
+    N = x.shape[0]
+    # extract d_1,...,d_k from x: (N,d_1,...,d_k)
+    d1_dk = x.shape[1:]
+    # take product of all from d1 to dk
+    D = np.prod(d1_dk)
+    # reshape x according to (N,D)
+    x_reshaped = x.reshape(N,D)
+    
+    # dout/dx = w --> dx = dout/w
+    dx = dout.dot(w.T).reshape(x.shape)
+    # dout/dw = x --> dw = dout/x
+    dw = x_reshaped.T.dot(dout)
+    # dout/db = 1 --> db = dout
+    db = np.sum(dout, axis=0)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -82,7 +106,7 @@ def relu_forward(x):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    out = np.maximum(0, x)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -108,7 +132,7 @@ def relu_backward(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    dx = dout * (cache > 0)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -137,7 +161,26 @@ def softmax_loss(x, y):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    N = x.shape[0]
+    C = x.shape[1]
+    margin = 1
+    loss = 0
+    dx = np.zeros_like(x)
+    
+    for i in range(N):
+        correct_class_score = x[i,y[i]]
+        for j in range(C):
+            if y[i] == j:
+                continue
+            score = x[i,j]
+            innerloss = np.maximum(0, score - correct_class_score + margin)
+            loss += innerloss
+            if score - correct_class_score + margin > 0:
+                dx[i, j] = 1
+                dx[i, y[i]] -= 1 
+        
+    loss /= N
+    dx /= N
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -215,8 +258,25 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         # might prove to be helpful.                                          #
         #######################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-        pass
+        #init cache 
+        cache = {}
+        sample_mean = np.mean(x, axis=0)
+        sample_var = np.var(x, axis=0)
+        #normalized input data
+        x_h = (x - sample_mean.T) / np.sqrt(sample_var.T + eps)
+        #calculate out
+        out = x_h * gamma + beta
+        
+        running_mean = momentum * running_mean + (1 - momentum) * sample_mean
+        running_var = momentum * running_var + (1 - momentum) * sample_var
+        
+        cache['x'] = x
+        cache['gamma'] = gamma
+        cache['beta'] = beta
+        cache['eps'] = eps
+        cache['sample_mean'] = sample_mean
+        cache['sample_var'] = sample_var
+        cache['x_h'] = x_h
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         #######################################################################
@@ -231,7 +291,8 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         #######################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        x_hat = (x - running_mean) / np.sqrt(running_var)
+        out = x_hat * gamma + beta
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         #######################################################################
@@ -271,8 +332,21 @@ def batchnorm_backward(dout, cache):
     # might prove to be helpful.                                              #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    
+    N = dout.shape[0]
 
-    pass
+    # dx_hat/dout = gamma --> dx_hat = dout*gamma
+    dx_h = dout * cache['gamma'] 
+    
+    # dsample_var = (1->N)∑ dx_h * -1/2 * (x-mean) * (var+eps)^-3/2 
+    dsample_var = np.sum(dx_h * (-0.5) * (cache['x']-cache['sample_mean']) * (cache['sample_var'] + cache['eps'])**(-1.5), axis=0)
+    # dsample_mean = (1->N)∑ dx_h * (-1/sqrt(var+eps)) + (dsample_var * (1->N)∑ -2(x -sample_mean))/N
+    dsample_mean = np.sum(dx_h * (-1/np.sqrt(cache['sample_var'] + cache['eps'])), axis=0) + dsample_var * ((np.sum(-2*(cache['x']-cache['sample_mean']))) / N)
+
+    dx = dx_h * (1/np.sqrt(cache['sample_var'] + cache['eps'])) + dsample_var * (2*(cache['x']-cache['sample_mean'])/N) + dsample_mean/N
+    
+    dbeta = np.sum(dout, axis=0)
+    dgamma = np.sum(dout * cache['x_h'], axis=0)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
