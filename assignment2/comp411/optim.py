@@ -68,8 +68,12 @@ def sgd_momentum(w, dw, config=None):
     # the next_w variable. You should also use and update the velocity v.     #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    # v = mu * v - learning_rate * dx
+    v = (config['momentum'] * v) - (config['learning_rate'] * dw)
+    # x += v
+    next_w = w + v
 
-    pass
+    #pass
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -106,8 +110,10 @@ def rmsprop(w, dw, config=None):
     # config['cache'].                                                        #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    pass
+    # cache = β⋅cache + (1−β)⋅(∇J(θ))^2
+    config['cache'] = (config['decay_rate']*config['cache']) + (1-config['decay_rate'])* (dw**2)
+    # θ = θ - (α/sqrt(cache+eps)))*(∇J(θ))
+    next_w = w - config['learning_rate'] * dw / (np.sqrt(config['cache']) + config['epsilon'])
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -151,8 +157,18 @@ def adam(w, dw, config=None):
     # using it in any calculations.                                           #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    pass
+    # increase t by 1
+    config['t'] += 1
+    # m = β1*m + (1-β1) * ∇J(θ)
+    config['m'] = config['beta1'] * config['m'] + (1 - config['beta1']) * dw
+    # v = β2*v + (1-β2) * (∇J(θ))^2
+    config['v'] = config['beta2'] * config['v'] + (1 - config['beta2']) * dw**2
+    # m_h = m / (1-β1)^t
+    m_h = config['m'] / (1 - config['beta1']**config['t'])
+    # v_h = m / (1-β2)^t
+    v_h = config['v'] / (1 - config['beta2']**config['t'])
+    # θ = θ - (α/(sqrt(v_h)+eps)*(∇J(θ))
+    next_w = w - config['learning_rate'] / (np.sqrt(v_h) + config['epsilon']) * m_h
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
