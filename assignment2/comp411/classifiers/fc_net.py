@@ -93,7 +93,7 @@ class FullyConnectedNet(object):
             Wx = 'W' + str_i
             bx = 'b' + str_i
             
-            # wtore weights and biases
+            # store weights and biases
             # weights should be initialized from a normal distribution
             # with standard deviation equal to weight_scale, and biases should be initialized to zero.
             self.params[Wx] = np.random.normal(scale=weight_scale, size=(whole_layers_dims[i-1], whole_layers_dims[i]))
@@ -197,28 +197,33 @@ class FullyConnectedNet(object):
             betax = 'beta' + str_i
             cachex = 'c' + str_i
             
+            # affine forward exists at each layer, pre init
             affine_out, affine_cache = affine_forward(next_input, self.params[Wx], self.params[bx])
             loss_reg += 0.5 * self.reg * np.sum(self.params[Wx]**2)
             
+            # handle last layer, it will pass affine forward to the softmax
             if i == self.num_layers:
                 scores=affine_out
                 self.cache[cachex] = (affine_cache,0)
                 break
+            
+            # handle normalized layer, if not pass with relu
             if self.normalization:
-                batchnorm_out,batchnorm_cache=batchnorm_forward(affine_out,self.params[gammax],
-                                                           self.params[betax],self.bn_params[i-1])
-                relu_out,relu_cache=relu_forward(batchnorm_out)
+                batchnorm_out, batchnorm_cache = batchnorm_forward(affine_out, self.params[gammax],
+                                                           self.params[betax], self.bn_params[i-1])
+                relu_out, relu_cache = relu_forward(batchnorm_out)
                 relu_cache = (batchnorm_cache,relu_cache)
             else:
-                relu_out,relu_cache=relu_forward(affine_out)
+                relu_out, relu_cache = relu_forward(affine_out)
                 
+            # handle dropout
             if self.use_dropout:
-                dropout_output,dropout_cache=dropout_forward(relu_out,self.dropout_param)
-                self.cache[cachex] = (affine_cache,relu_cache,dropout_cache)
-                next_input=dropout_output
+                dropout_output, dropout_cache = dropout_forward(relu_out, self.dropout_param)
+                self.cache[cachex] = (affine_cache, relu_cache, dropout_cache)
+                next_input = dropout_output
             else:    
-                self.cache[cachex] = (affine_cache,relu_cache)
-                next_input=relu_out
+                self.cache[cachex] = (affine_cache, relu_cache)
+                next_input = relu_out
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
         #                             END OF YOUR CODE                             #
@@ -258,19 +263,21 @@ class FullyConnectedNet(object):
             cachex = 'c' + str_i
             
             if i == self.num_layers:
-                dx,dw,db=affine_backward(dout, self.cache[cachex][0])
+                dx, dw, db = affine_backward(dout, self.cache[cachex][0])
             
             else:
                 if self.use_dropout:
-                    dx=dropout_backward(dx,self.cache[cachex][2])
+                    dx = dropout_backward(dx,self.cache[cachex][2])
                 if self.normalization:
-                    dR,dgamma,dbeta=batchnorm_relu_backward(dx,self.cache[cachex][1])
-                    grads[gammax]=dgamma
-                    grads[betax]=dbeta
+                    batchnorm_cache, relu_cache = self.cache[cachex][1]
+                    da = relu_backward(dx, relu_cache)
+                    dx, dgamma, dbeta = batchnorm_backward(da, batchnorm_cache)
+                    grads[gammax] = dgamma
+                    grads[betax] = dbeta
                 else:
-                    dR = relu_backward(dx, self.cache[cachex][1])
+                    dx = relu_backward(dx, self.cache[cachex][1])
                     
-                dx, dw, db = affine_backward(dR, self.cache[cachex][0])
+                dx, dw, db = affine_backward(dx, self.cache[cachex][0])
 
             grads[Wx]= dw+self.reg*self.params[Wx]
             grads[bx]= db 
