@@ -634,7 +634,20 @@ def max_pool_forward_naive(x, pool_param):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    N, C, H, W = x.shape
+    stride = pool_param['stride']
+    HH = pool_param['pool_height']
+    WW = pool_param['pool_width']
+    out_height = int(1 + (H  - HH) / stride)
+    out_width = int(1 + (W - WW) / stride)
+    
+    out = np.zeros((N, C, out_height, out_width))
+
+    for cur_height in range(out_height):
+        for cur_width in range(out_width):
+            hh, ww = cur_height * stride, cur_width * stride
+            x_slice = x[:, :, hh:hh + HH, ww:ww + WW]
+            out[:, :, cur_height, cur_width] = np.max(x_slice, axis=(2, 3))
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -660,7 +673,25 @@ def max_pool_backward_naive(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    x, pool_param = cache
+    N, C, H, W = x.shape
+    stride = pool_param['stride']
+    HH = pool_param['pool_height']
+    WW = pool_param['pool_width']
+    out_height = int(1 + (H  - HH) / stride)
+    out_width = int(1 + (W - WW) / stride)
+
+    dx = np.zeros(x.shape)
+
+    for cur_height in range(out_height):
+        for cur_width in range(out_width):
+            hh, ww = cur_height * stride, cur_width * stride
+            x_slice = x[:, :, hh:hh + HH, ww:ww + WW]
+            dx_slice = dx[:, :, hh:hh + HH, ww:ww + WW]
+            mask = (np.max(x_slice, axis=(2, 3), keepdims=True) == x_slice)
+            dx_slice += mask * dout[:, :, cur_height, cur_width, np.newaxis, np.newaxis]
+
+    dx = dx.reshape(N, C, H, W)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
