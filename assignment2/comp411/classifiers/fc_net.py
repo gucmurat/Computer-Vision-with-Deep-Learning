@@ -5,6 +5,17 @@ import numpy as np
 from ..layers import *
 from ..layer_utils import *
 
+def batchnorm_relu_forward(x,gamma,beta,bn_param):
+    batchnorm_out,batchnorm_cache = batchnorm_forward(x,gamma,beta,bn_param)
+    out,relu_cache=relu_forward(batchnorm_out)
+    cache=(batchnorm_cache,relu_cache)
+    return out,cache
+
+def batchnorm_relu_backward(dout,cache):
+    batchnorm_cache,relu_cache=cache
+    da=relu_backward(dout,relu_cache)
+    dx,dgamma,dbeta=batchnorm_backward(da,batchnorm_cache)
+    return dx,dgamma,dbeta
 
 class FullyConnectedNet(object):
     """Class for a multi-layer fully connected neural network.
@@ -75,29 +86,29 @@ class FullyConnectedNet(object):
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         
         whole_layers_dims = [input_dim] + hidden_dims + [num_classes]
-        
+
         for i in range(1, self.num_layers + 1):
-            #weights and biases
+            # weights and biases
             str_i = str(i)
             Wx = 'W' + str_i
             bx = 'b' + str_i
-            #store weights and biases
-            #weights should be initialized from a normal distribution 
-                # with standard deviation equal to
-                # weight_scale and biases should be initialized to zero.
+            
+            # wtore weights and biases
+            # weights should be initialized from a normal distribution
+            # with standard deviation equal to weight_scale, and biases should be initialized to zero.
             self.params[Wx] = np.random.normal(scale=weight_scale, size=(whole_layers_dims[i-1], whole_layers_dims[i]))
             self.params[bx] = np.zeros(whole_layers_dims[i])
             
-            #when using batch normalization
-            if self.normalization and i != self.num_layers:
-                #scale param
+            # when using batch normalization and not the last layer
+            if self.normalization and i < self.num_layers:
+                # scale param
                 gammax = 'gamma' + str_i
-                #shift param
+                # Shift param
                 betax = 'beta' + str_i
-                #scale parameters should be initialized to ones
-                self.params[gammax] = np.ones(whole_layers_dims[i-1])
-                #shift parameters should be initialized to zeros
-                self.params[betax] = np.zeros(whole_layers_dims[i-1])
+                # scale parameters should be initialized to ones
+                self.params[gammax] = np.ones(whole_layers_dims[i])
+                # shift parameters should be initialized to zeros
+                self.params[betax] = np.zeros(whole_layers_dims[i])
              
         #pass
 
@@ -174,8 +185,9 @@ class FullyConnectedNet(object):
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         # init cache
         self.cache = {}
-        scores = X
-        
+        next_input=X
+        loss_reg=0
+                
         for i in range(1, self.num_layers + 1):
             #weights and biases
             str_i = str(i)
@@ -183,23 +195,30 @@ class FullyConnectedNet(object):
             bx = 'b' + str_i
             gammax = 'gamma' + str_i
             betax = 'beta' + str_i
-            batchnormx = 'batchnorm' + str_i
-            dropoutx = 'dropout' + str_i
             cachex = 'c' + str_i
             
+            affine_out, affine_cache = affine_forward(next_input, self.params[Wx], self.params[bx])
+            loss_reg += 0.5 * self.reg * np.sum(self.params[Wx]**2)
+            
             if i == self.num_layers:
-                scores, cache = affine_forward(scores, self.params[Wx], self.params[bx])
+                scores=affine_out
+                self.cache[cachex] = (affine_cache,0)
+                break
+            if self.normalization:
+                batchnorm_out,batchnorm_cache=batchnorm_forward(affine_out,self.params[gammax],
+                                                           self.params[betax],self.bn_params[i-1])
+                relu_out,relu_cache=relu_forward(batchnorm_out)
+                relu_cache = (batchnorm_cache,relu_cache)
             else:
-                if self.normalization:
-                    scores, self.cache[batchnormx] = batchnorm_forward(scores, self.params[gammax], self.params[betax], self.bn_params[i-1])
-
-                scores, cache = affine_relu_forward(scores, self.params[Wx], self.params[bx])
-
-                if self.use_dropout:
-                    scores, self.dropout_cache[dropoutx] = dropout_forward(scores, self.dropout_param)
-
-            self.cache[cachex] = cache
-
+                relu_out,relu_cache=relu_forward(affine_out)
+                
+            if self.use_dropout:
+                dropout_output,dropout_cache=dropout_forward(relu_out,self.dropout_param)
+                self.cache[cachex] = (affine_cache,relu_cache,dropout_cache)
+                next_input=dropout_output
+            else:    
+                self.cache[cachex] = (affine_cache,relu_cache)
+                next_input=relu_out
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
         #                             END OF YOUR CODE                             #
@@ -225,7 +244,9 @@ class FullyConnectedNet(object):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        loss, dscores = softmax_loss(scores, y)
+        data_loss,dout=softmax_loss(scores,y)
+        loss = data_loss+loss_reg
+        dx,dw,db=None,None,None
         
         for i in range(self.num_layers, 0, -1):
             #weights and biases
@@ -234,26 +255,26 @@ class FullyConnectedNet(object):
             bx = 'b' + str_i
             gammax = 'gamma' + str_i
             betax = 'beta' + str_i
-            batchnormx = 'batchnorm' + str_i
-            dropoutx = 'dropout' + str_i
             cachex = 'c' + str_i
             
-            loss += 0.5*self.reg*np.sum(self.params[Wx]**2) 
-      
             if i == self.num_layers:
-                dscores, grads[Wx], grads[bx] = affine_backward(dscores, self.cache[cachex])
+                dx,dw,db=affine_backward(dout, self.cache[cachex][0])
+            
             else:
                 if self.use_dropout:
-                    dscores = dropout_backward(dscores, self.cache[dropoutx])
-
-                dscores, grads[Wx], grads[bx] = affine_relu_backward(dscores, self.cache[cachex])
-
+                    dx=dropout_backward(dx,self.cache[cachex][2])
                 if self.normalization:
-                    dscores, grads[gammax], grads[betax] = batchnorm_backward(dscores, self.cache[batchnormx])
+                    dR,dgamma,dbeta=batchnorm_relu_backward(dx,self.cache[cachex][1])
+                    grads[gammax]=dgamma
+                    grads[betax]=dbeta
+                else:
+                    dR = relu_backward(dx, self.cache[cachex][1])
+                    
+                dx, dw, db = affine_backward(dR, self.cache[cachex][0])
 
-            grads[Wx] += self.reg*self.params[Wx]
-
-        # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+            grads[Wx]= dw+self.reg*self.params[Wx]
+            grads[bx]= db 
+            
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
