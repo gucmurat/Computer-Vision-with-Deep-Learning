@@ -528,8 +528,22 @@ def conv_forward_naive(x, w, b, conv_param):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    N, C, H, W = x.shape
+    F, Cw, HH, WW = w.shape
+    stride = conv_param['stride']
+    pad = conv_param['pad']
+    out_height = int(1 + (H + 2 * pad - HH) / stride)
+    out_width = int(1 + (W + 2 * pad - WW) / stride)
 
+    x_padded = np.pad(x, ((0, 0), (0, 0), (pad, pad), (pad, pad)))
+
+    out = np.zeros((N, F, out_height, out_width))
+
+    for cur_height in range(out_height):
+        for cur_width in range(out_width):
+            hh, ww = cur_height * stride, cur_width * stride
+            out[:, :, cur_height, cur_width] = np.sum(x_padded[:, :, hh:hh + HH, ww:ww + WW][:, np.newaxis, :, :, :] * w[:, :, :, :], axis=(2, 3, 4)) + b
+   
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -556,8 +570,37 @@ def conv_backward_naive(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    x, w, b, conv_param = cache
+    N, C, H, W = x.shape
+    F, Cw, HH, WW = w.shape
+    stride = conv_param['stride']
+    pad = conv_param['pad']
+    out_height = int(1 + (H + 2 * pad - HH) / stride)
+    out_width = int(1 + (W + 2 * pad - WW) / stride)
 
+    x_padded = np.pad(x, ((0, 0), (0, 0), (pad, pad), (pad, pad)))
+
+    dx_padded = np.zeros(x_padded.shape)
+    dw = np.zeros(w.shape)
+    db = np.zeros(b.shape)
+    
+    for cur_height in range(out_height):
+        for cur_width in range(out_width):
+            hh, ww = cur_height * stride, cur_width * stride
+            
+            reshaped_dout = dout[:, :, cur_height, cur_width].reshape(N, F, 1, 1, 1)
+            dx_padded[:, :, hh:hh+HH, ww:ww+WW] += np.sum(w[:, :, :, :] * reshaped_dout, axis=1)
+            
+            x_padded_slice = x_padded[:, :, hh:hh + HH, ww:ww + WW]
+            
+            for k in range(F):
+                reshaped_dout = dout[:, k, cur_height, cur_width].reshape(dout[:, k, cur_height, cur_width].shape[0], 1, 1, 1)
+                dw[k, :, :, :] += np.sum(x_padded_slice * reshaped_dout, axis=0)
+                
+            db += np.sum(dout[:, :, cur_height, cur_width], axis=0)
+            
+    dx = dx_padded[:, :, pad: -pad, pad: -pad]
+    
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
