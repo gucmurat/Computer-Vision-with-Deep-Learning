@@ -535,7 +535,7 @@ def conv_forward_naive(x, w, b, conv_param):
     out_height = int(1 + (H + 2 * pad - HH) / stride)
     out_width = int(1 + (W + 2 * pad - WW) / stride)
 
-    x_padded = np.pad(x, ((0, 0), (0, 0), (pad, pad), (pad, pad)))
+    x_padded = np.pad(x, ((0, 0), (0, 0), (pad, pad), (pad, pad)), mode='constant', constant_values=0)
     out = np.zeros((N, F, out_height, out_width))
     for cur_height in range(out_height):
         for cur_width in range(out_width):
@@ -576,7 +576,7 @@ def conv_backward_naive(dout, cache):
     out_height = int(1 + (H + 2 * pad - HH) / stride)
     out_width = int(1 + (W + 2 * pad - WW) / stride)
 
-    x_padded = np.pad(x, ((0, 0), (0, 0), (pad, pad), (pad, pad)))
+    x_padded = np.pad(x, ((0, 0), (0, 0), (pad, pad), (pad, pad)), mode='constant', constant_values=0)
     dx_padded = np.zeros(x_padded.shape)
     dw = np.zeros(w.shape)
     db = np.zeros(b.shape)
