@@ -536,9 +536,7 @@ def conv_forward_naive(x, w, b, conv_param):
     out_width = int(1 + (W + 2 * pad - WW) / stride)
 
     x_padded = np.pad(x, ((0, 0), (0, 0), (pad, pad), (pad, pad)))
-
     out = np.zeros((N, F, out_height, out_width))
-
     for cur_height in range(out_height):
         for cur_width in range(out_width):
             hh, ww = cur_height * stride, cur_width * stride
@@ -579,11 +577,9 @@ def conv_backward_naive(dout, cache):
     out_width = int(1 + (W + 2 * pad - WW) / stride)
 
     x_padded = np.pad(x, ((0, 0), (0, 0), (pad, pad), (pad, pad)))
-
     dx_padded = np.zeros(x_padded.shape)
     dw = np.zeros(w.shape)
     db = np.zeros(b.shape)
-    
     for cur_height in range(out_height):
         for cur_width in range(out_width):
             hh, ww = cur_height * stride, cur_width * stride
@@ -636,18 +632,18 @@ def max_pool_forward_naive(x, pool_param):
 
     N, C, H, W = x.shape
     stride = pool_param['stride']
-    HH = pool_param['pool_height']
-    WW = pool_param['pool_width']
-    out_height = int(1 + (H  - HH) / stride)
-    out_width = int(1 + (W - WW) / stride)
+    pool_height = pool_param['pool_height']
+    pool_width = pool_param['pool_width']
+    out_height = int(1 + (H  - pool_height) / stride)
+    out_width = int(1 + (W - pool_width) / stride)
     
     out = np.zeros((N, C, out_height, out_width))
-
     for cur_height in range(out_height):
         for cur_width in range(out_width):
             hh, ww = cur_height * stride, cur_width * stride
-            x_slice = x[:, :, hh:hh + HH, ww:ww + WW]
-            out[:, :, cur_height, cur_width] = np.max(x_slice, axis=(2, 3))
+            for n in range(N):
+                x_slice = x[n, :, hh:hh + pool_height, ww:ww + pool_width]
+                out[n, :, cur_height, cur_width] = np.max(x_slice, axis=(-2,-1))
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -676,21 +672,20 @@ def max_pool_backward_naive(dout, cache):
     x, pool_param = cache
     N, C, H, W = x.shape
     stride = pool_param['stride']
-    HH = pool_param['pool_height']
-    WW = pool_param['pool_width']
-    out_height = int(1 + (H  - HH) / stride)
-    out_width = int(1 + (W - WW) / stride)
+    pool_height = pool_param['pool_height']
+    pool_width = pool_param['pool_width']
+    out_height = int(1 + (H  - pool_height) / stride)
+    out_width = int(1 + (W - pool_width) / stride)
 
     dx = np.zeros(x.shape)
-
     for cur_height in range(out_height):
         for cur_width in range(out_width):
             hh, ww = cur_height * stride, cur_width * stride
-            x_slice = x[:, :, hh:hh + HH, ww:ww + WW]
-            dx_slice = dx[:, :, hh:hh + HH, ww:ww + WW]
+            x_slice = x[:, :, hh:hh + pool_height, ww:ww + pool_width]
+            dx_slice = dx[:, :, hh:hh + pool_height, ww:ww + pool_width]
             mask = (np.max(x_slice, axis=(2, 3), keepdims=True) == x_slice)
             dx_slice += mask * dout[:, :, cur_height, cur_width, np.newaxis, np.newaxis]
-
+            
     dx = dx.reshape(N, C, H, W)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
@@ -725,8 +720,21 @@ def avg_pool_forward_naive(x, pool_param):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
-
+    N, C, H, W = x.shape
+    stride = pool_param['stride']
+    pool_height = pool_param['pool_height']
+    pool_width = pool_param['pool_width']
+    out_height = int(1 + (H  - pool_height) / stride)
+    out_width = int(1 + (W - pool_width) / stride)
+    
+    out = np.zeros((N, C, out_height, out_width))
+    for cur_height in range(out_height):
+        for cur_width in range(out_width):
+            hh, ww = cur_height * stride, cur_width * stride
+            for n in range(N):
+                x_slice = x[n, :, hh:hh + pool_height, ww:ww + pool_width]
+                out[n, :, cur_height, cur_width] = np.average(x_slice, axis=(-2,-1))
+                
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -751,8 +759,25 @@ def avg_pool_backward_naive(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass            
+    x, pool_param = cache
+    N, C, H, W = x.shape
+    stride = pool_param['stride']
+    pool_height = pool_param['pool_height']
+    pool_width = pool_param['pool_width']
+    out_height = int(1 + (H  - pool_height) / stride)
+    out_width = int(1 + (W - pool_width) / stride)
 
+    dx = np.zeros(x.shape)
+    for cur_height in range(out_height):
+        for cur_width in range(out_width):
+            hh, ww = cur_height * stride, cur_width * stride
+            x_slice = x[:, :, hh:hh + pool_height, ww:ww + pool_width]
+            dx_slice = dx[:, :, hh:hh + pool_height, ww:ww + pool_width]
+            avg_dout = (dout[:, :, cur_height, cur_width] / (pool_height * pool_width)).reshape(N, C, 1, 1)
+            mask = np.ones_like(x_slice) * (avg_dout != 0)
+            dx_slice += mask * avg_dout
+    
+    
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
