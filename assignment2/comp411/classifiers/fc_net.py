@@ -5,18 +5,6 @@ import numpy as np
 from ..layers import *
 from ..layer_utils import *
 
-def batchnorm_relu_forward(x,gamma,beta,bn_param):
-    batchnorm_out,batchnorm_cache = batchnorm_forward(x,gamma,beta,bn_param)
-    out,relu_cache=relu_forward(batchnorm_out)
-    cache=(batchnorm_cache,relu_cache)
-    return out,cache
-
-def batchnorm_relu_backward(dout,cache):
-    batchnorm_cache,relu_cache=cache
-    da=relu_backward(dout,relu_cache)
-    dx,dgamma,dbeta=batchnorm_backward(da,batchnorm_cache)
-    return dx,dgamma,dbeta
-
 class FullyConnectedNet(object):
     """Class for a multi-layer fully connected neural network.
 
