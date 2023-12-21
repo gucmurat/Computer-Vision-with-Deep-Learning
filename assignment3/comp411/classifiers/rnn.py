@@ -148,7 +148,32 @@ class CaptioningRNN(object):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         
-        pass
+        #(1) Use an affine transformation to compute the initial hidden state
+        h0, cache_affine = affine_forward(features, W_proj, b_proj)
+        
+        # (2) Use a word embedding layer to transform the words in captions_in
+        embedded_captions_in, cache_embedding_in = word_embedding_forward(captions_in, W_embed)
+        
+        # (3) Use a vanilla RNN to process the sequence of input word vectors
+        h, cache_rnn = rnn_forward(embedded_captions_in, h0, Wx, Wh, b)
+        
+        # (4) Use a (temporal) affine transformation to compute scores over the
+        #     vocabulary at every timestep using the hidden states
+        y, cache_temporal = temporal_affine_forward(h, W_vocab, b_vocab)
+        
+        # (5) Use (temporal) softmax to compute loss using captions_out, ignoring
+        #     the points where the output word is <NULL> using the mask above.
+        loss, dout = temporal_softmax_loss(y, captions_out, mask)
+        
+        # (4) temporal_affine_backward
+        dout, grads["W_vocab"], grads["b_vocab"] = temporal_affine_backward(dout, cache_temporal)
+        # (3) rnn_backward
+        dout, dh0, grads["Wx"], grads["Wh"], grads["b"] = rnn_backward(dout, cache_rnn)
+        # (2) word_embedding_backward
+        grads["W_embed"] = word_embedding_backward(dout, cache_embedding_in)
+        # (1) affine_backward
+        h, grads["W_proj"], grads["b_proj"] = affine_backward(dh0, cache_affine)        
+
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
